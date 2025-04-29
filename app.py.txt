@@ -1,0 +1,48 @@
+import streamlit as st
+import requests
+
+# Replace this with your partner's real model
+def predict_wattage(irradiance, temperature, num_panels, panel_rating):
+    # Dummy model example
+    efficiency_factor = 0.75  # assume 75% system efficiency
+    wattage_per_panel = irradiance * efficiency_factor  # simple relation
+    total_wattage = wattage_per_panel * num_panels * (panel_rating / 1000)  # panel_rating is in watts
+    return total_wattage
+
+def get_weather_data(lat, lon):
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=1&hourly=temperature_2m,cloudcover,shortwave_radiation"
+    response = requests.get(url)
+    data = response.json()
+
+    # Extract current values
+    temperature = data['current']['temperature_2m']
+    cloud_cover = data['current']['cloudcover']
+    irradiance = data['current']['shortwave_radiation']  # in W/m²
+
+    return irradiance, cloud_cover, temperature
+
+# Streamlit UI
+st.title("Solar Panel System Output Estimator")
+
+# Input fields
+latitude = st.number_input("Latitude", format="%.6f")
+longitude = st.number_input("Longitude", format="%.6f")
+num_panels = st.number_input("Number of Panels", min_value=1, step=1)
+panel_rating = st.number_input("Panel Rating (Watts)", min_value=0)
+
+# When user clicks the button
+if st.button("Get Prediction"):
+    try:
+        irradiance, cloud_cover, temperature = get_weather_data(latitude, longitude)
+        wattage = predict_wattage(irradiance, temperature, num_panels, panel_rating)
+
+        st.subheader("Weather Information")
+        st.write(f"Irradiance: {irradiance} W/m²")
+        st.write(f"Cloud Cover: {cloud_cover} %")
+        st.write(f"Temperature: {temperature} °C")
+
+        st.subheader("Predicted Output")
+        st.success(f"Estimated System Output: {wattage:.2f} Watts")
+
+    except Exception as e:
+        st.error(f"Failed to fetch weather data: {e}")
